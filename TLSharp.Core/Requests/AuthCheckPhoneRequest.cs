@@ -23,7 +23,7 @@ namespace TLSharp.Core.Requests
 
         public override void OnResponse(BinaryReader reader)
         {
-            var dataCode = reader.ReadUInt32(); // #e300cc3b 
+            uint dataCode = reader.ReadUInt32(); // #e300cc3b 
             this._phoneRegistered = reader.ReadUInt32() == 0x997275b5;
             this._phoneInvited = reader.ReadUInt32() == 0x997275b5;
         }

@@ -16,7 +16,7 @@ namespace TLSharp.Core
     public class TelegramClient
     {
         private MtProtoSender _sender;
-        private AuthKey _key;
+        //private AuthKey _key; se usa la de la sesion asi que no es necesaria...
         private TcpTransport _transport;
         private string _apiHash = "";
         private int _apiId = 0;
@@ -100,7 +100,7 @@ namespace TLSharp.Core
             if (_sender == null)
                 throw new InvalidOperationException("Not connected!");
 
-            var authCheckPhoneRequest = new AuthCheckPhoneRequest(phoneNumber);
+            AuthCheckPhoneRequest authCheckPhoneRequest = new AuthCheckPhoneRequest(phoneNumber);
             await _sender.Send(authCheckPhoneRequest);
             await _sender.Receive(authCheckPhoneRequest);
 
