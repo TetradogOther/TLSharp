@@ -20,7 +20,7 @@ namespace TLSharp.Core
         private TcpTransport _transport;
         private string _apiHash = "";
         private int _apiId = 0;
-        private Session _session;
+        public Session Session { get; private set; }
         private List<DcOption> dcOptions;
 
         public enum sms_type { numeric_code_via_sms = 0, numeric_code_via_telegram = 5 }
@@ -34,24 +34,34 @@ namespace TLSharp.Core
             if (string.IsNullOrEmpty(_apiHash))
                 throw new InvalidOperationException("Your API_ID is invalid. Do a configuration first https://github.com/sochix/TLSharp#quick-configuration");
 
-            _session = sesion;
-            _transport = new TcpTransport(_session.ServerAddress, _session.Port);
+            Session = sesion;
+            _transport = new TcpTransport(Session.ServerAddress, Session.Port);
 
         }
+
+
+
         public TelegramClient(ISessionStore store, string sessionUserId, int apiId, string apiHash):this(Session.TryLoadOrCreateNew(store, sessionUserId),apiId,apiHash)
         {
         }
-
+        public bool EstaConectado
+        {
+            get { return Session.AuthKey != null; }
+        }
+        public async Task<User> SignIn()
+        {
+            throw new NotImplementedException();
+        }
         public async Task<bool> Connect(bool reconnect = false)
         {
-            if (_session.AuthKey == null || reconnect)
+            if (Session.AuthKey == null || reconnect)
             {
                 var result = await Authenticator.DoAuthentication(_transport);
-                _session.AuthKey = result.AuthKey;
-                _session.TimeOffset = result.TimeOffset;
+                Session.AuthKey = result.AuthKey;
+                Session.TimeOffset = result.TimeOffset;
             }
 
-            _sender = new MtProtoSender(_transport, _session);
+            _sender = new MtProtoSender(_transport, Session);
 
             if (!reconnect)
             {
@@ -74,15 +84,15 @@ namespace TLSharp.Core
             var dc = dcOptions.Cast<DcOptionConstructor>().First(d => d.id == dcId);
 
             _transport = new TcpTransport(dc.ip_address, dc.port);
-            _session.ServerAddress = dc.ip_address;
-            _session.Port = dc.port;
+            Session.ServerAddress = dc.ip_address;
+            Session.Port = dc.port;
 
             await Connect(true);
         }
 
         public bool IsUserAuthorized()
         {
-            return _session.User != null;
+            return Session.User != null;
         }
 
         public async Task<bool> IsPhoneRegistered(string phoneNumber)
@@ -153,10 +163,10 @@ namespace TLSharp.Core
 
         private void OnUserAuthenticated(User user, int sessionExpiration)
         {
-            _session.User = user;
-            _session.SessionExpires = sessionExpiration;
+            Session.User = user;
+            Session.SessionExpires = sessionExpiration;
 
-            _session.Save();
+            Session.Save();
         }
 
         public async Task<InputFile> UploadFile(string name, byte[] data)
@@ -283,7 +293,10 @@ namespace TLSharp.Core
                 Users = request.users,
             };
         }
-
+        public async Task<UserFull> GetUserFull(string telefonoOUsuario,bool esTelefono=true)
+        {
+            return await GetUserFull((await (esTelefono?ImportContactByPhoneNumber(telefonoOUsuario):ImportByUserName(telefonoOUsuario))).Value);
+        }
         public async Task<UserFull> GetUserFull(int user_id)
         {
             var request = new GetUserFullRequest(user_id);
@@ -360,7 +373,7 @@ namespace TLSharp.Core
 
         public async Task<Messages_statedMessageConstructor> LeaveChat(int chatId)
         {
-            return await DeleteChatUser(chatId, ((UserSelfConstructor) _session.User).id);
+            return await DeleteChatUser(chatId, ((UserSelfConstructor) Session.User).id);
         }
 
         public async Task<updates_State> GetUpdatesState()
