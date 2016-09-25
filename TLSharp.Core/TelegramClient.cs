@@ -24,8 +24,7 @@ namespace TLSharp.Core
         private List<DcOption> dcOptions;
 
         public enum sms_type { numeric_code_via_sms = 0, numeric_code_via_telegram = 5 }
-
-        public TelegramClient(ISessionStore store, string sessionUserId, int apiId, string apiHash)
+        public TelegramClient(Session sesion, int apiId, string apiHash)
         {
             _apiHash = apiHash;
             _apiId = apiId;
@@ -35,8 +34,12 @@ namespace TLSharp.Core
             if (string.IsNullOrEmpty(_apiHash))
                 throw new InvalidOperationException("Your API_ID is invalid. Do a configuration first https://github.com/sochix/TLSharp#quick-configuration");
 
-            _session = Session.TryLoadOrCreateNew(store, sessionUserId);
+            _session = sesion;
             _transport = new TcpTransport(_session.ServerAddress, _session.Port);
+
+        }
+        public TelegramClient(ISessionStore store, string sessionUserId, int apiId, string apiHash):this(Session.TryLoadOrCreateNew(store, sessionUserId),apiId,apiHash)
+        {
         }
 
         public async Task<bool> Connect(bool reconnect = false)
@@ -94,7 +97,7 @@ namespace TLSharp.Core
             return authCheckPhoneRequest._phoneRegistered;
         }
 
-        public async Task<string> SendCodeRequest(string phoneNumber, sms_type tokenDestination = sms_type.numeric_code_via_telegram)
+        public async Task<string> SendCodeRequest(string phoneNumber, sms_type tokenDestination = sms_type.numeric_code_via_telegram,string langCode="en")
         {
             var completed = false;
 
@@ -102,7 +105,7 @@ namespace TLSharp.Core
 
             while (!completed)
             {
-                request = new AuthSendCodeRequest(phoneNumber, (int)tokenDestination, _apiId, _apiHash, "en");
+                request = new AuthSendCodeRequest(phoneNumber, (int)tokenDestination, _apiId, _apiHash, langCode);
                 try
                 {
                     await _sender.Send(request);
